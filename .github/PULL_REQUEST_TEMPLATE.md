@@ -31,3 +31,7 @@ Some brief examples of release notes:
 ```release-note
 
 ```
+
+## Verification
+<!-- How you tested it? How do you know it works? -->
+Please check the [Prometheus-Operator testing guidelines](../TESTING.MD) for recommendations about automated tests.
