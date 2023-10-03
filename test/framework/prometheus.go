@@ -316,6 +316,12 @@ func (f *Framework) CreatePrometheusAndWaitUntilReady(ctx context.Context, ns st
 		return nil, fmt.Errorf("waiting for %v Prometheus instances timed out (%v): %v", p.Spec.Replicas, p.Name, err)
 	}
 
+	// We get the prometheus instance again to make sure we have status updated.
+	result, err = f.MonClientV1.Prometheuses(ns).Get(ctx, p.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("getting Prometheus instances failed (%v): %v", p.Name, err)
+	}
+
 	return result, nil
 }
 
@@ -327,6 +333,21 @@ func (f *Framework) ScalePrometheusAndWaitUntilReady(ctx context.Context, name, 
 		monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				Replicas: ptr.To(int32(replicas)),
+			},
+		},
+	)
+}
+
+// TODO(arthursens): Use UpdateScale() instead of PatchPrometheusAndWaitUntilReady() once we have a
+// working UpdateScale() implementation.
+func (f *Framework) ScalePrometheusShardsAndWaitUntilReady(ctx context.Context, name, ns string, shards int32) (*monitoringv1.Prometheus, error) {
+	return f.PatchPrometheusAndWaitUntilReady(
+		ctx,
+		name,
+		ns,
+		monitoringv1.PrometheusSpec{
+			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+				Shards: ptr.To(int32(shards)),
 			},
 		},
 	)
@@ -372,6 +393,12 @@ func (f *Framework) PatchPrometheusAndWaitUntilReady(ctx context.Context, name, 
 
 	if err := f.WaitForPrometheusReady(ctx, p, 5*time.Minute); err != nil {
 		return nil, err
+	}
+
+	// We get the prometheus instance again to make sure we have status updated.
+	p, err = f.MonClientV1.Prometheuses(ns).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get Prometheus %s/%s", ns, name)
 	}
 
 	return p, nil
